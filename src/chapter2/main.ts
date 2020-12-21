@@ -15,11 +15,8 @@ type Schema = {
                 response: Todo
             },
         },
-        "/todos/:id": {
+        "/todos/1": {
             GET: {
-                params: {
-                    id: number;
-                },
                 response: Todo
             },
             PUT: {
@@ -38,13 +35,15 @@ const main = async () => {
     const apiClient = rpc<Schema>(endpoint);
 
     const result = await apiClient.call(
-        "GET",
-        "/todos/:id",
-        { id: 1 }
-    );
+        "POST",
+        "/todos",
+        { userId: 1, title: "test", completed: false }
+    )
 
     if (result.type === "succeeded") {
-        result.data.
+        console.log(result.data)
+    } else if (result.type === "failed") {
+        console.log(result.data)
     }
 }
 

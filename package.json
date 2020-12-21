@@ -1,8 +1,10 @@
 {
   "scripts": {
-    "start": "ts-node main.ts --lib=ES2015"
+    "chapter1": "ts-node src/chapter1/main.1ts --lib=ES2015",
+    "start": "ts-node src/main.ts --lib=ES2015"
   },
   "dependencies": {
+    "@types/node-fetch": "^2.5.7",
     "node-fetch": "^2.6.1",
     "ts-node": "^9.1.1",
     "typescript": "^4.1.3"

@@ -28,72 +28,69 @@ const fail = <A>(a: A) => ({
     data: a,
 });
 
-export default <A extends Schema>(schema: A) => {
-    return {
-        call: async <
-            Method extends GrandChildren<A["resource"]>,
-            Path extends Owns<A["resource"], Method>,
-            Params extends Get<A["resource"][Path][Method], "params">,
-            Body extends Get<A["resource"][Path][Method], "body">
-        >(
-            method: Method,
-            path: Path,
-            ...rest: ExcludeUndefined<[Params, Body]>
-        ) => {
-            try {
-                let appliedPath = path.toString();
+export default <A extends Schema>(endpoint: string) => ({
+    call: async <
+        Method extends GrandChildren<A["resource"]>,
+        Path extends Owns<A["resource"], Method>,
+        Params extends Get<A["resource"][Path][Method], "params">,
+        Body extends Get<A["resource"][Path][Method], "body">
+    >(
+        method: Method,
+        path: Path,
+        ...rest: ExcludeUndefined<[Params, Body]>
+    ) => {
+        try {
+            let appliedPath = path.toString();
 
-                const paramExists = /:[a-zA-Z0-9]+/.test(appliedPath);
+            const paramExists = /:[a-zA-Z0-9]+/.test(appliedPath);
 
-                if (paramExists) {
-                    for (const name in rest[0]) {
-                        appliedPath = appliedPath.replace(new RegExp(`:${name}`), (rest[0] as any)[name]);
-                    }
+            if (paramExists) {
+                for (const name in rest[0]) {
+                    appliedPath = appliedPath.replace(new RegExp(`:${name}`), (rest[0] as any)[name]);
                 }
+            }
 
-                const data = await fetch(schema.endpoint + appliedPath, {
-                    method: method as string,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    ...(rest.length != 1 || paramExists
-                        ? {}
-                        : {
-                              body: JSON.stringify(rest[0]),
-                          }),
-                    ...(rest.length != 2
-                        ? {}
-                        : {
-                              body: JSON.stringify(rest[1]),
-                          }),
+            const data = await fetch(endpoint + appliedPath, {
+                method: method as string,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                ...(rest.length != 1 || paramExists
+                    ? {}
+                    : {
+                            body: JSON.stringify(rest[0]),
+                        }),
+                ...(rest.length != 2
+                    ? {}
+                    : {
+                            body: JSON.stringify(rest[1]),
+                        }),
+            });
+            if (data.status === 404) {
+                return fail({
+                    type: "not-found",
+                    data: "Not Found",
                 });
-                if (data.status === 404) {
-                    return fail({
-                        type: "not-found",
-                        data: "Not Found",
-                    });
-                }
+            }
 
-                try {
-                    return succeed(await data.json() as A["resource"][Path][Method]["response"]);
-                } catch (e) {
-                    return fail({
-                        type: "parse-error" as const,
-                        data: e,
-                    });
-                }
+            try {
+                return succeed(await data.json() as A["resource"][Path][Method]["response"]);
             } catch (e) {
                 return fail({
-                    type: "network-error" as const,
+                    type: "parse-error" as const,
                     data: e,
                 });
             }
-        },
-    };
-};
+        } catch (e) {
+            return fail({
+                type: "network-error" as const,
+                data: e,
+            });
+        }
+    },
+});
 
 export type Schema = {
-    endpoint: string;
     resource: {
         [path: string]: {
             [method: string]: {
